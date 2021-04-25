@@ -1,0 +1,259 @@
+# Setup React and Webpack from scratch
+
+Learn how to create a Webpack config from scratch for your React apps
+We're going to start from a completely blank workspace, install all of the dependencies, create all of the configuration files which will take your source React files and convert them into something that is usable in the browser. At the end of the video I'll show you a couple of other plugins that you can use and also how to do a production build so that your code is ready to be deployed to the server somewhere.
+
+Let's start off by creating a new project and installing all of the dependencies you're going to need for this tutorial.
+First things first, run `npm init -y` this initializes our project and sets up our `package.json` file with all the default `npm` configuration. You can change any of this afterwards.
+
+Next, let's install our dependencies, we're going to start off with the React related ones.
+
+```bash
+npm i react react-dom
+
+# or
+
+yarn add react react-dom
+```
+
+Once these are installed, you'll notice that the dependencies section of our `package.json` is now updated. Like in the image below.
+
+Next we are going to install our development dependencies. We'd need to handle our JSX code for React and also going to be adding support for SASS and CSS as well so we need the appropriate loaders for Webpack to be able to recognize these files and add support for them.
+Add NPM links to deps
+
+- `@babel/core`,
+- `@babel/preset-env`,
+- `@babel/preset-react` ,
+- `babel-loader`: This and all of the babel related dependencies will convert the React code, in particular the JSX into browser readable code. Without these, our React code won't work in the browser.
+- `file-loader`: Will import out HTML file into our overall output
+- `css-loader`: This will load our CSS onto our HTML document
+- `style-loader`: Will create a new style tag in our HTML our HTML output and load in all of the files that have been converted from SASS.
+- `sass-loader` and `sass`,: Will take care of converting our sass files into CSS.
+- `webpack` and `webpack-cli`: These will allow us to bundle our code so that it is ready to be consumed by the browser.
+
+Our devDependencies section in `package.json` should look like this now.
+
+We need to setup our babel configuration to tell babel about all of these packages and tools we would be using, the easiest way to do this is to create a `.babelrc` file.
+In our `.babelrc` file, we need to define what presets we would be using;
+
+```json
+{
+  "presets": ["@babel/preset-env", "@babel/preset-react"]
+}
+```
+
+With these changes, we have our environment for `babel` configured now to accept React code but we still need to create a `Webpack` config which will take our source files and create a bundle that can be used in the browser.
+
+Create a file in our root folder called `webpack.config.js`, this file actually runs in a node.JS environment not in the browser.
+
+Here, we are going to define a few properties required by `webpack` to bundle our React application.
+
+- output: The output property defines where we want our files to be sent after they have been bundled with webpack. We'll take our source files, pass them through all the presets and loaders and then create an output file which will actually be run in the browser. Here we set the directory where we want our bundled files to be outputted and we set the filename for our bundled React JavaScript app.
+
+- devServer: Webpack v5 comes default with a development server, so we can also modify properties for that. Here we define the specific port we want the `webpack` server to run on and we also set it to watch for every file change.
+
+- module: The `module` property defines how webpack is going to take our source files and compile them into a browser ready bundle. We include a set of rules handle the different type of files we want to bundle.
+
+```js
+const path = require("path");
+
+module.exports = {
+  // the output property defines where we want our files to be sent after they have been bundled with webpack. We'll take our source files, pass them through all the presets and loaders and then create an output file which will actually run in the browser
+  output: {
+    // take the existing directory name that we're in and output into a folder called "dist".
+    path: path.join(__dirname, "/dist"),
+    // our overall react app will be bundled into a JS file called "index.bundle.js".
+    filename: "index.bundle.js",
+  },
+  // webpack v5 comes default with a development server, so we can also modify properties for that.
+  devServer: {
+    port: 3002, // specific port we want the server to run on
+    watchContentBase: true, // watch our app for every file changes
+  },
+  // the module property defines how webpack is going to take our source files and compile them into a browser ready bundle.
+  module: {
+    // different rules are set to handle different type of files
+    rules: [
+      {
+        test: /\.(js|jsx)$/, // identify any JS/JSX files in our src folder
+        exclude: /node_modules/, // ignore the node_modules folder
+        use: {
+          // once any JS/JSX files are matched, load them with the babel loader
+          loader: "babel-loader",
+        },
+      },
+      {
+        test: /\.scss$/, // identify any SCSS/SASS files in our src folder
+        use: [
+          "style-loader", // creates a style tag in our index page when it is outputted
+          "css-loader", // helps load our CSS files
+          "sass-loader", // converts our SCSS/SASS files into CSS files which is useable by the browser
+        ],
+      },
+    ],
+  },
+};
+```
+
+Now we have our completed `webpack` config, what's left is to invoke webpack to run with these configurations. Before we do that however, we need to create our React source files so that webpack can have something to work with.
+
+Let's create a new folder called source and inside here is where all of our React source files is going to be.
+
+`App.js` will be the main entry point for React.
+`App.scss` to handle our styles
+`index.js` specific to webpack, this sets off our webpack bundling for us.
+`index.html` where our bundled file will be outputted
+
+In our `App.js` file, we're going to create a simple component for demonstration purposes.
+
+In our `index.html` we're going to create a div with an id of 'app' which we will later reference with ReactDOM.
+
+In our `index.js` we'll basically render our `App.js` component with ReactDOM and mount it in our `index.html` file by passing the reference of its ID to it.
+
+At this point, if you try opening the `index.html` in a browser, you'd see a blank page indicating that our app is not yet working as we'd expect. The reason for this is because we're yet to link our bundled JavaScript source file to our HTML file.
+
+We can do that by adding this line of code.
+
+```html
+<body>
+  <div id="app"></div>
+  <!-- here -->
+  <script src="index.bundle.js"></script>
+</body>
+```
+
+The reason we point our src in the script tag to `index.bundle.js` is because this is the output file of our bundled JavaScript from webpack. Remember the output property in our webpack config? We want to point our HTML to a browser readable JavaScript source file, the one that has been compiled by babel and bundled by webpack not the React one that runs in a NodeJS environment.
+
+If we were to reference the `index.js` file which already exists rather than `index.bundle.js` you'd notice a different error this time, which says `SyntaxError: Cannot use import statement outside a module`. That's because the browser doesn't understand all of our import statements like `import React from 'react'`, we need to use webpack and babel to convert these into a browser friendly format.
+
+If you look into the console you'd notice the error 404(Not found), that's because this file does not exist yet. We're yet to run the webpack server that will in turn build our React app, when we do so, we'd have the output `index.bundle.js` and this error would go away because the file no exists.
+
+One thing to do in the `index.js` file is to make sure that when webpack runs through all of our files it actually includes this `index.html` in the output. Think of the `index.js` file as the starting point for webpack, it will basically look that's inside of there and include that in the output and currently at the moment we don't have reference to the `index.html` file so we need to add that. We can do that with a special require statement.
+
+```js
+require("file-loader?name=[name].[ext]!./index.html"); // new
+import React from "react";
+import ReactDOM from "react-dom";
+import { App } from "./App";
+
+ReactDOM.render(<App />, document.getElementById("app"));
+```
+
+With that in place, that would actually load the `index.html` file into webpack as well and include that in the final output. With this change, we're ready to pass all of our code into webpack, we could use webpack directly from the command-line, but it's much more convenient to create a script within your `package.json` so you can run it with the `npm run` or `yarn` command.
+
+Get rid of our default test script in `package.json` and create a new one called serve.
+
+```json
+ "scripts": {
+    "serve": "webpack serve --mode development" // new
+  },
+```
+
+We pass in the `--mode` argument to the webpack server as `development` to speed up our reload time.
+
+Now in your terminal run the command `npm run serve` or `yarn serve` and you should see a message telling you that our app is now running successfully on the port that we specified earlier in the `webpack.config.js`.
+
+Open the link in the browser and you should see our actual React app is running. It has been mounted and the app component that has the welcome message is being displayed there.
+
+If we make changes to our component, you'll notice that the webpack dev server will automatically reload and our changes are displayed appropriately. This is pretty much essential to our development workflow, having the ability to make changes and instantly see them update otherwise its a long process having to recompile everything each time.
+
+With our webpack dev server now setup and running, let's try to add some styles.
+
+In our `App.scss` file, let's try to target the h1 element to change its color
+
+```css
+h1 {
+  color: blue;
+}
+```
+
+If we save that, we can see that the app refreshes but there is no changes to the content that's on the web page at the moment. This is because we haven't actually yet made a reference to `App.scss` within our webpack setup.
+
+All of our style related loaders are in place in our `webpack.config.js` but in our `index.js` file, we need to include anything here that we want to be included in the final bundle output. That was why we previously had to put the file-loader for the `index.html` page as well.
+
+All we need to do is to import directly from our local directory the `App.scss` file.
+
+```js
+require("file-loader?name=[name].[ext]!./index.html");
+import React from "react";
+import ReactDOM from "react-dom";
+import { App } from "./App";
+import "./App.scss"; // new
+
+ReactDOM.render(<App />, document.getElementById("app"));
+```
+
+When we save that now, after a quick recompile we can see the text for the h1 tag has now been updated.
+So that was a simple setup to get our React code running in the browser.
+
+If we were to finish our React app and want to push it live somewhere, we'd need to have the webpack output folder somewhere on the file system so you can upload it. We can achieve this by using another webpack command.
+In our `package.json` let's create another script called build.
+
+```json
+ "scripts": {
+    "serve": "webpack serve --mode development",
+    "build": "webpack --mode production"
+  },
+```
+
+The script command is similar to our `serve` command script except that this time around we set the mode to production which will make the build take a little bit longer but will actually set webpack into production mode so if we want any optimizations such as minification, etc, all that would be handled for us.
+
+Stop the web server, run the command `npm run build` or `yarn build`, you can now see our `dist` output folder with our `index.html` file referencing the `index.bundle.js` which is the JS bundle that webpack creates, you can't really read it, but it's got all of our code required to run our demo React app.
+If you open the `index.html` file in our browser, you should see the same content as we did with the webpack dev server, except now we've got the bundle files which we could push up to a web server if we wanted to.
+
+There are loads of more configuration options we can pass into webpack, one example is the option to have our CSS file bundled separately instead of together with our JavaScript file. If you take a look at our completely built file, you can notice the styles being applied, but you can't see a CSS file in our dist folder. Inside of our `<head>` tag, we've just got the `<style>` tag with rules from our SCSS files embedded in them.
+To have our CSS in a separate file, we'd have to make use of an additional webpack plugin `mini-css-extract-plugin` to filter off our CSS into a separate file.
+
+To get started, install `mini-css-extract-plugin`:
+
+```bash
+npm install -D mini-css-extract-plugin
+# or
+yarn add -D mini-css-extract-plugin
+```
+
+In our `webpack.config.js` import the package like below
+
+```js
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+```
+
+instead of using the `style-loader` which is the loader that creates the styles tag in our `<head>` of the HTML document, we'll replace it with the loader property of `mini-css-extract-plugin`.
+
+```js
+{
+  use: [MiniCssExtractPlugin.loader, "css-loader", "sass-loader"];
+}
+```
+
+At the bottom of our config, we'll define a plugin property and include support for the `MiniCssExtractPlugin`
+
+```js
+plugins: [new MiniCssExtractPlugin()],
+```
+
+Save the config and re-run our build, you can see that in our `dist` folder we've now got `main.css` which actually has the compiled styles in there.
+The `main.css` file has not been linked to our `index.html`, so if you refresh the browser, you'll see that our styles are not being applied.
+To fix this, we'll need to put a link to the `main.css`.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React App</title>
+    <!-- new -->
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="index.bundle.js"></script>
+  </body>
+</html>
+```
+
+if we run the build one more time, we can see that the styles are re-applied. If we take a look at the network tab, you can see that the `main.css` has been loade d in via a network request and we're no longer using the style tag in the head.
+
+There are loads of more customization you can add to webpack depending on how you want your project to be setup and by going through the webpack documentation or by doing a little bit of Googling, you can get the result that you're after.
